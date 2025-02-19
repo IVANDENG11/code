@@ -1,0 +1,180 @@
+{% extends "layout.html" %}
+{% block title %} 基于Python的商品评论数据分析系统 {% endblock %}
+
+{% block css %}
+    <style>
+        body {
+            background-color: #F1F1F1;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="layui-fluid" style="width: 90%;margin: 10px auto">
+        <form class="layui-form" action="{% url 'kmeansPlot' %}" style="text-align: center" method="get">
+            <div class="layui-form-item">
+                <div class="layui-inline">
+                    <label class="layui-form-label" style="width: 200px">聚类个数</label>
+                    <div class="layui-input-inline" style="width: 100px;">
+                        <select name="num" id="" required="required">
+                            <option value="" disabled>请选择聚类的个数</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-inline">
+                    <div class="layui-input-inline" style="width: 100px;">
+                        <button class="layui-btn" lay-submit lay-filter="formDemo">立即提交</button>
+                    </div>
+                </div>
+            </div>
+
+
+        </form>
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-xs12">
+                <div class="layui-card">
+                    <div class="layui-card-header"> 聚类饼图</div>
+                    <div class="layui-card-body">
+                        <div id="container" style="height: 400px"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="layui-row layui-col-space15">
+
+            {% for data in data_list %}
+                <div class="layui-col-xs6">
+                    <div class="layui-card">
+                        <div class="layui-card-header">{{ data.title }}词云图</div>
+                        <div class="layui-card-body">
+                            <div id="{{ data.id }}" style="height: 400px"></div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+        </div>
+
+
+    </div>
+{% endblock %}
+
+{% block js %}
+    <script src="/static/js/echarts.min.js"></script>
+    <script>
+        //Demo
+        layui.use('form', function () {
+            var form = layui.form;
+
+            //监听提交
+            form.on('submit(formDemo)', function (data) {
+                {#layer.msg(JSON.stringify(data.field));#}
+                {#return false;#}
+            });
+        });
+    </script>
+    <!-- 饼图--->
+    <script type="text/javascript">
+        var dom = document.getElementById("container");
+        var myChart = echarts.init(dom);
+        var app = {};
+        var option;
+        option = {
+            title: {
+                {#text: 'Referer of a Website',#}
+                {#subtext: 'Fake Data',#}
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'item'
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left'
+            },
+            series: [{
+                name: '个数',
+                type: 'pie',
+                radius: '50%',
+                data: {{ pie_data |safe }},
+                /*[{
+                value: 1048,
+                name: 'Search Engine'
+            }, {
+                value: 735,
+                name: 'Direct'
+            }, {
+                value: 580,
+                name: 'Email'
+            }, {
+                value: 484,
+                name: 'Union Ads'
+            }, {
+                value: 300,
+                name: 'Video Ads'
+            }]*/
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }]
+        };
+
+        if (option && typeof option === 'object') {
+            myChart.setOption(option);
+        }
+    </script>
+
+
+    <!--词云图 -->
+    <script src="/static/js/echart3.js"></script>
+    <script src="/static/js/echarts-wordcloud.js"></script>
+    <script type="text/javascript">
+
+        var raw_data = {{ data_list |safe }};
+        for (var i = 0; i < raw_data.length; i++) {
+            var myChart = echarts3.init(document.getElementById(raw_data[i].id));
+            var keywords = raw_data[i].data
+            var option = {
+                series: [{
+                    type: 'wordCloud',
+                    sizeRange: [15, 80],
+                    rotationRange: [0, 0],
+                    rotationStep: 45,
+                    gridSize: 8,
+                    shape: 'pentagon',
+                    width: '100%',
+                    height: '100%',
+                    textStyle: {
+                        normal: {
+                            color: function () {
+                                return 'rgb(' + [
+                                    Math.round(Math.random() * 160),
+                                    Math.round(Math.random() * 160),
+                                    Math.round(Math.random() * 160)
+                                ].join(',') + ')';
+                            }
+                        }
+                    },
+                    data: keywords
+                }]
+            };
+            // 使用刚指定的配置项和数据显示图表。
+            myChart.setOption(option);
+            window.addEventListener("resize", function () {
+                myChart.resize();
+            });
+        }
+
+    </script>
+
+
+{% endblock %}

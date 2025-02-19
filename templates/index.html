@@ -1,0 +1,207 @@
+{% extends "layout.html" %}
+{% block title %} 基于Python的商品评论数据分析系统 {% endblock %}
+
+{% block css %}
+    <style>
+
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="modal hidden"></div>
+    <div class="modal loading hidden">
+        <img src="/static/loading.gif" alt="" style="width: 100%;height: 100%">
+    </div>
+    <form class="layui-form" action="/" style="text-align: center;width: 1200px;margin: 20px auto" method="get">
+        <div class="layui-form-item">
+            <label class="layui-form-label" style="width: 200px">商品评论分类</label>
+            <div class="layui-input-inline">
+                <select name="key" id="">
+                    {% for topic in topic_list %}
+                        <option {% ifequal topic key %} selected="selected" {% endifequal %} value="{{ topic }}">{{ topic }}</option>
+
+
+                    {% endfor %}
+
+                </select>
+            </div>
+            <div class="layui-input-inline">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="formDemo">立即查找</button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+
+   <div style="margin: 2px auto;text-align: center">
+       <h3>  （提示：点击“情感分类”按钮，完成“商品评论情感分类”字段的计算） </h3>
+     </br>
+        <button type="button" class="fenlei layui-btn  layui-btn-normal">情感分类</button>
+    </div>
+
+
+    <table class="layui-table" style="width: 100%;margin: 10px auto">
+        <thead>
+        <tr>
+            <th width="100">id</th>
+             <th width="150">用户昵称</th>
+            <th width="100">用户评分</th>
+            <th width="700">商品评论</th>
+             <!-- <th>图片</th> -->
+            <th width="200">商品分类</th>
+
+            <th width="150">商品属性</th>
+
+            <th width="85">商品评论图片数量</th>
+            <th width="250">评论时间</th>
+{#            <th width="85">其他数</th>#}
+
+
+{#            <th width="100">发布位置</th>#}
+
+            <th width="150">商品评论情感分类</th>
+
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for upload in data_list %}
+            <tr>
+                <td>{{ upload.id }}</td>
+                <td>{{ upload.name }}</td>
+                <td>{{ upload.pingfen }}</td>
+                <td>{{ upload.content }}</td>
+                <!-- <td><img src="{{ upload.img }}" alt="图片" style="width: 50px;height: 50px"></td> -->
+                <td>{{ upload.topic }}</td>
+
+                <td>{{ upload.shuxing }}</td>
+
+                <td>{{ upload.count }}</td>
+              <td>{{ upload.time }}</td>
+{#                <td>{{ upload.other }}</td>#}
+
+
+{#                <td>{{ upload.fenlei }}</td>#}
+
+                <td>
+                    {% if upload.emotion %}
+                        {{ upload.emotion }}
+                    {% else %}
+                        <button type="button" class="layui-btn layui-btn-sm layui-btn-danger">未分类</button>
+                    {% endif %}
+                </td>
+{#                <td>#}
+{#                    {% ifnotequal upload.url 'nan' %}#}
+{#                        <a href="{{ upload.url }}" target="_blank">查看原文</a>#}
+{#                    {% endifnotequal %}#}
+{#                </td>#}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div id="demo2"></div>
+{% endblock %}
+
+
+{% block js %}
+    <script>
+        //Demo
+        layui.use('form', function () {
+            var form = layui.form;
+            //监听提交
+            form.on('submit(formDemo)', function (data) {
+                {#layer.msg(JSON.stringify(data.field));#}
+                location.href = "/?kind=" + $('select[name="kind"]').val()
+            });
+            //监听提交
+            form.on("select(sheng)", function (data) {
+                {#alert(data.value); // 获取选中的值#}
+                var sheng = data.value
+                $.ajax({
+                    url: '/getcol/',
+                    dataType: 'json',
+                    method: 'post',
+                    data: {
+                        'sheng': sheng
+                    },
+                    success: function (data) {
+                        {#console.log(data.data)#}
+                        $('select[name="city"]').find('option').remove()
+                        $('select[name="xian"]').find('option').remove()
+                        form.render('select');//重点：重新渲染select
+
+                        var html = '<option value="">请选择市</option>'
+                        for (var i = 0; i < data.data.length; i++) {
+                            html += '<option value="' + data.data[i] + '">' + data.data[i] + '</option>'
+                        }
+                        $('select[name="city"]').html(html)
+                        $('select[name="xian"]').html('<option value="">请选择县</option>')
+                        form.render('select');//重点：重新渲染select
+                    }
+                });
+            });
+        });
+
+        $('.layui-btn-danger').click(function () {
+            var id = $(this).attr('id_')
+            $('.modal').removeClass('hidden')
+            $('.loading').removeClass('hidden')
+            $.ajax({
+                url: '/scrawl/',
+                dataType: 'json',
+                method: 'post',
+                data: {
+                    'id': id
+                },
+                success: function (data) {
+                    if (data.status == 'ok') {
+                        $('.modal').addClass('hidden')
+                        $('.loading').addClass('hidden')
+                        alert('爬取或者更新数据完成')
+                        location.reload()
+                    }
+                }
+            });
+        })
+
+    </script>
+
+    <script>
+        layui.use(['laypage', 'layer'], function () {
+            var laypage = layui.laypage
+                , layer = layui.layer;
+            //自定义样式
+            laypage.render({
+                elem: 'demo2'
+                , limit: 100
+                , count: 1000
+                , theme: '#1E9FFF'
+                , curr: {{ page|safe }}
+                , jump: function (obj, first) {
+                    //obj包含了当前分页的所有参数，比如：
+                    console.log(obj.curr); //得到当前页，以便向服务端请求对应页的数据。
+                    console.log(obj.limit); //得到每页显示的条数
+
+                    //首次不执行
+                    if (!first) {
+                        //do something
+                        location.href = "/?page=" + obj.curr;
+                    }
+
+                }
+            });
+
+        });
+    </script>
+    <script src="/static/jquery-3.5.1.js"></script>
+    <script>
+        $('.fenlei').click(function () {
+            $(this).text('情感分类中。。。。。。。')
+            $.post('{% url "fenlei" %}', function (msg) {
+                $('.fenlei').text('情感分类完成')
+            });
+        })
+    </script>
+
+{% endblock %}
